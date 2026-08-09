@@ -51,6 +51,100 @@ A smart Bengali voice assistant for Windows with local AI processing.
 | খুঁজে দেখো... | search for... |
 | google করো... | google... |
 
+# Nahin AI Desktop Assistant
+
+A Windows personal desktop AI assistant that starts automatically at login,
+greets you, and shows a startup briefing with a safe command center.
+
+## What Nahin AI is
+
+Nahin AI is a local-first personal assistant. On top of the Bengali voice
+assistant, it now includes a **startup dashboard** (`/nahin`) with:
+
+- **Startup briefing** — greeting, date, time, workspace and project info
+- **AI status** — local mode + developer mode indicators
+- **Command center** — safe, whitelist-only developer commands
+- **Integration placeholders** — todos, email, GitHub (ready to connect)
+- **Future modules** — voice, local AI, coding, debugging, email and todo agents
+
+## Auto-start feature
+
+Nahin AI can launch automatically when Windows starts:
+
+```bat
+cd C:\xampp\htdocs\nahin-ai
+
+windows-startup\install-startup.bat
+```
+
+Remove auto-start at any time:
+
+```bat
+cd C:\xampp\htdocs\nahin-ai
+
+windows-startup\remove-startup.bat
+```
+
+See `windows-startup/README.md` for details and troubleshooting.
+
+## Startup dashboard
+
+Run the dashboard server manually:
+
+```bat
+cd C:\xampp\htdocs\nahin-ai
+python dashboard\app.py
+```
+
+Or use the launcher:
+
+```bat
+windows-startup\start-nahin-ai.bat
+```
+
+Open the dashboard:
+
+```
+http://127.0.0.1:8000/nahin
+```
+
+## Command center
+
+Supported (whitelist-only) commands:
+
+| Command | What it does |
+|---------|--------------|
+| `help` | List all available commands |
+| `git status` | Show current Git repository status |
+| `project status` | Show project, workspace and branch |
+| `clear cache` | Clear Python `__pycache__` folders |
+| `run tests` | Run pytest (or unittest fallback) |
+| `open vscode` | Prepare VS Code desktop execution |
+| `today's briefing` / `briefing` | Show the startup briefing |
+
+## Safe command rules
+
+- Raw user input is **never** executed — only fixed whitelisted commands run.
+- Commands containing dangerous words (`delete`, `rm`, `format`, `shutdown`,
+  `reset`, `db:wipe`, `migrate:fresh`, `rebase`, `chmod`, `powershell`,
+  `curl`, `wget`, ...) are **blocked for safety**.
+- Command output is HTML-escaped, redacted for secrets, and length-limited.
+- Future destructive actions will require explicit confirmation.
+
+## Roadmap
+
+- Voice assistant (wake word "Hey Nahin")
+- Email integration
+- Todo integration
+- GitHub integration
+- Local AI with Ollama
+- Developer automation
+- Testing agent
+- Debugging agent
+- Multi-agent system
+
+---
+
 ## Installation
 
 ### Prerequisites

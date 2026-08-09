@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nahin AI — Startup Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='nahin.css') }}">
+</head>
+<body>
+    <div class="app-shell">
+
+        <!-- ===== Top Navigation ===== -->
+        <header class="topbar">
+            <div class="brand">
+                <span class="brand-dot"></span>
+                <h1>Nahin <span>AI</span></h1>
+            </div>
+            <nav class="topnav">
+                <a href="#status">AI Status</a>
+                <a href="#briefing">Briefing</a>
+                <a href="#work">Work</a>
+                <a href="#command">Command Center</a>
+                <a href="#future">Roadmap</a>
+            </nav>
+            <button id="speak-greeting" class="btn btn-glow" type="button">
+                &#128266; Speak Greeting
+            </button>
+        </header>
+
+        <!-- ===== Hero Header ===== -->
+        <section class="hero">
+            <div class="hero-greeting">
+                <h2 id="greeting-text">{{ briefing.greeting }} 👋</h2>
+                <p>Welcome back to <strong>Nahin AI</strong>. Your developer assistant is ready.</p>
+            </div>
+            <div class="hero-clock">
+                <span class="time" id="clock-time">{{ briefing.time }}</span>
+                <span class="date" id="clock-date">{{ briefing.date }}</span>
+            </div>
+        </section>
+
+        <!-- ===== Status Row ===== -->
+        <section class="grid grid-3" id="status">
+            <article class="card">
+                <div class="card-head">
+                    <span class="pulse online"></span>
+                    <h3>AI Status</h3>
+                </div>
+                <ul class="status-list">
+                    <li><span class="label">Nahin AI</span><span class="value ok">Online</span></li>
+                    <li><span class="label">Local Mode</span><span class="value ok">Active</span></li>
+                    <li><span class="label">Developer Mode</span><span class="value ok">Active</span></li>
+                </ul>
+            </article>
+
+            <article class="card">
+                <div class="card-head">
+                    <span class="pulse ok"></span>
+                    <h3>Local Assistant</h3>
+                </div>
+                <ul class="status-list">
+                    <li><span class="label">Status</span><span class="value ok">{{ briefing.local_status }}</span></li>
+                    <li><span class="label">Stack</span><span class="value">{{ briefing.environment }}</span></li>
+                    <li><span class="label">Endpoint</span><span class="value mono">127.0.0.1:{{ port }}</span></li>
+                </ul>
+            </article>
+
+            <article class="card">
+                <div class="card-head">
+                    <span class="pulse"></span>
+                    <h3>Startup Briefing</h3>
+                </div>
+                <ul class="status-list">
+                    <li><span class="label">Project</span><span class="value">{{ briefing.project }}</span></li>
+                    <li><span class="label">Workspace</span><span class="value mono small">{{ briefing.workspace }}</span></li>
+                    <li><span class="label">Mode</span><span class="value ok">Developer</span></li>
+                </ul>
+            </article>
+        </section>
+
+        <!-- ===== Briefing Row ===== -->
+        <section class="grid grid-2" id="briefing">
+            <article class="card">
+                <div class="card-head">
+                    <span class="icon">☀️</span>
+                    <h3>Today's Focus</h3>
+                </div>
+                <ul class="focus-list">
+                    {% for item in briefing.todos['items'] %}
+                    <li><span class="check">&#10003;</span> {{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </article>
+
+            <article class="card">
+                <div class="card-head">
+                    <span class="icon">🧭</span>
+                    <h3>Work Overview</h3>
+                </div>
+                <ul class="status-list">
+                    <li><span class="label">Active project</span><span class="value">{{ briefing.work.active_project }}</span></li>
+                    <li><span class="label">Current goal</span><span class="value">{{ briefing.work.current_goal }}</span></li>
+                    <li><span class="label">Status</span><span class="value ok">{{ briefing.work.status }}</span></li>
+                </ul>
+            </article>
+        </section>
+
+        <!-- ===== Integration Row ===== -->
+        <section class="grid grid-3" id="integrations">
+            <article class="card dim">
+                <div class="card-head">
+                    <span class="icon">✅</span>
+                    <h3>Todo Center</h3>
+                </div>
+                <p class="card-body">{{ briefing.todos.status }} — Todo integration ready to connect.</p>
+                <span class="badge">Coming soon</span>
+            </article>
+
+            <article class="card dim">
+                <div class="card-head">
+                    <span class="icon">✉️</span>
+                    <h3>Email Center</h3>
+                </div>
+                <p class="card-body">{{ briefing.emails.summary }}</p>
+                <span class="badge">Coming soon</span>
+            </article>
+
+            <article class="card dim">
+                <div class="card-head">
+                    <span class="icon">🐙</span>
+                    <h3>GitHub Center</h3>
+                </div>
+                <p class="card-body">Repository: <span class="mono">{{ briefing.github.repository }}</span></p>
+                <span class="badge">Coming soon</span>
+            </article>
+        </section>
+
+        <!-- ===== Command Center ===== -->
+        <section class="card command-card" id="command">
+            <div class="card-head">
+                <span class="icon">⌨️</span>
+                <h3>Developer Command Center</h3>
+                <span class="badge badge-ok">Safe mode</span>
+            </div>
+
+            <div class="quick-actions" id="quick-actions">
+                {% for cmd in commands %}
+                <button class="chip" type="button" data-command="{{ cmd }}">{{ cmd }}</button>
+                {% endfor %}
+            </div>
+
+            <form id="command-form" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="command-input-row">
+                    <input
+                        type="text"
+                        id="command-input"
+                        name="command"
+                        placeholder="Ask Nahin AI to do something..."
+                        list="command-suggestions"
+                        autofocus>
+                    <datalist id="command-suggestions">
+                        {% for cmd in commands %}
+                        <option value="{{ cmd }}"></option>
+                        {% endfor %}
+                    </datalist>
+                    <button type="submit" class="btn btn-primary" id="run-command">Run Command</button>
+                </div>
+            </form>
+
+            <div class="output-panel" id="output-panel" aria-live="polite">
+                <div class="output-empty" id="output-empty">
+                    Command output will appear here.
+                </div>
+                <pre id="output-content" class="hidden"></pre>
+            </div>
+        </section>
+
+        <!-- ===== Future Modules ===== -->
+        <section class="grid grid-3" id="future">
+            <article class="card roadmap">
+                <span class="icon">🎙️</span><h4>Voice Assistant</h4>
+                <p>Wake word "Hey Nahin" + voice control.</p>
+            </article>
+            <article class="card roadmap">
+                <span class="icon">🤖</span><h4>Local AI</h4>
+                <p>Ollama-powered local models on your PC.</p>
+            </article>
+            <article class="card roadmap">
+                <span class="icon">✉️</span><h4>Email Agent</h4>
+                <p>Read, reply and triage email.</p>
+            </article>
+            <article class="card roadmap">
+                <span class="icon">✅</span><h4>Todo Agent</h4>
+                <p>Manage your todos automatically.</p>
+            </article>
+            <article class="card roadmap">
+                <span class="icon">💻</span><h4>Coding Agent</h4>
+                <p>Generate and review code locally.</p>
+            </article>
+            <article class="card roadmap">
+                <span class="icon">🐞</span><h4>Debugging Agent</h4>
+                <p>Find and fix bugs in your projects.</p>
+            </article>
+        </section>
+
+        <footer class="footer">
+            <p>Nahin AI — personal desktop assistant &middot; local only &middot; developer mode active</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='nahin.js') }}"></script>
+</body>
+</html>
