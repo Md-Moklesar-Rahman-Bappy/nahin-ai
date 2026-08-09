@@ -15,7 +15,18 @@ class LocalAIIntegrationService:
             return False
 
     def get_available_models(self) -> list:
-        return ["llama3.2", "llama3.1", "mistral"]
+        try:
+            from config import Config
+            return [Config.OLLAMA_MODEL, "llama3.2", "llama3.1", "mistral"]
+        except Exception:
+            return ["qwen3:4b", "llama3.2", "llama3.1", "mistral"]
+
+    def _installed_models(self):
+        try:
+            import ollama
+            return {m.get("name") for m in ollama.list().get("models", [])}
+        except Exception:
+            return None
 
     def ask_local_model(self, prompt: str) -> dict:
         try:
@@ -25,6 +36,15 @@ class LocalAIIntegrationService:
                 return {
                     "success": False,
                     "message": "Ollama is not running. Start Ollama and try again.",
+                }
+            installed = self._installed_models()
+            if installed is not None and client.model not in installed:
+                return {
+                    "success": False,
+                    "message": (
+                        f"Model '{client.model}' is not downloaded yet. "
+                        f"Run: ollama pull {client.model}"
+                    ),
                 }
             reply = client.generate_response(prompt)
             return {"success": True, "reply": reply, "model": client.model}

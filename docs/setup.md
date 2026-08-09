@@ -12,7 +12,7 @@
 - Install and start Ollama service
 - Pull the model:
   ```powershell
-  ollama pull llama3.2
+  ollama pull qwen3:4b
   ```
 - Verify: `ollama list`
 

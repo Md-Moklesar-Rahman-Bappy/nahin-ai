@@ -9,7 +9,7 @@ class Config:
     ASSISTANT_NAME = "Nahin"
     WAKE_WORD = "hey nahin"
     
-    OLLAMA_MODEL = "llama3.2"
+    OLLAMA_MODEL = "qwen3:4b"
     OLLAMA_BASE_URL = "http://localhost:11434"
     
     WHISPER_MODEL_SIZE = "base"

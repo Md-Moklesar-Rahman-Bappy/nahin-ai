@@ -157,7 +157,7 @@ Supported (whitelist-only) commands:
 2. **Ollama** (for local AI)
    ```powershell
    ollama --version
-   ollama pull llama3.2
+   ollama pull qwen3:4b
    ```
 
 3. **Git** (for version control)
@@ -225,7 +225,7 @@ nahin-ai/
 | Component | Technology |
 |-----------|------------|
 | STT | faster-whisper (local) |
-| LLM | Ollama (llama3.2) |
+| LLM | Ollama (qwen3:4b) |
 | TTS | Edge TTS (bn-BD-NabanitaNeural) |
 | Wake Word | Picovoice Porcupine |
 | UI | pystray |
