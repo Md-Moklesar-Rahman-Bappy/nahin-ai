@@ -2,9 +2,12 @@
 
 import ollama
 import logging
+import re
 from config import Config
 
 logger = logging.getLogger(__name__)
+
+_THINK_BLOCK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 
 class OllamaClient:
@@ -42,16 +45,45 @@ class OllamaClient:
             response = ollama.chat(
                 model=self.model,
                 messages=messages,
+                think=False,
                 options={
                     "temperature": 0.7,
                     "top_p": 0.9,
-                    "num_predict": 256,
+                    "num_predict": 2048,
                 }
             )
-            return response["message"]["content"]
+            return self._extract_content(response)
         except Exception as e:
             logger.error(f"LLM generation failed: {e}")
             return "দুঃখিত, আমি এই মুহূর্তে সাড়া দিতে পারছি না।"
+
+    @staticmethod
+    def _extract_content(response) -> str:
+        """Return the assistant text, tolerating qwen3 thinking-mode responses."""
+        message = response.get("message") if hasattr(response, "get") else getattr(response, "message", None)
+        if message is None:
+            return ""
+        content = ""
+        try:
+            content = message.get("content", "")
+        except Exception:
+            content = getattr(message, "content", "")
+        if content:
+            stripped = _THINK_BLOCK_RE.sub("", content).strip()
+            # qwen3 often closes its narration with </think> and then gives
+            # the real spoken answer; keep only what follows that marker.
+            marker = stripped.rfind("</think>")
+            if marker != -1:
+                after = stripped[marker + len("</think>"):].strip()
+                if after:
+                    return after
+            if stripped:
+                return stripped
+        # Fall back to the visible part of thinking if content is empty.
+        try:
+            return (message.get("thinking", "") or "").strip()
+        except Exception:
+            return getattr(message, "thinking", "") or ""
     
     def format_command_response(self, command_type: str, command: str, result: str) -> str:
         prompt = f"""User asked to {command}.
@@ -61,8 +93,9 @@ Generate a brief confirmation in Bengali (1-2 sentences) that acknowledges the a
             response = ollama.chat(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
-                options={"temperature": 0.5, "num_predict": 50}
+                think=False,
+                options={"temperature": 0.5, "num_predict": 2048}
             )
-            return response["message"]["content"]
+            return self._extract_content(response)
         except Exception:
             return result

@@ -24,7 +24,18 @@ class LocalAIIntegrationService:
     def _installed_models(self):
         try:
             import ollama
-            return {m.get("name") for m in ollama.list().get("models", [])}
+            models = ollama.list().get("models", [])
+            names = set()
+            for m in models:
+                name = getattr(m, "model", None)
+                if name is None:
+                    try:
+                        name = m.get("model") or m.get("name")
+                    except Exception:
+                        name = None
+                if name:
+                    names.add(name)
+            return names
         except Exception:
             return None
 
