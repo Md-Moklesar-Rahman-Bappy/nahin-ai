@@ -145,6 +145,85 @@ Supported (whitelist-only) commands:
 
 ---
 
+## Nahin AI Young Boy Voice Setup
+
+Nahin AI speaks with a cheerful, fictional young boy-style assistant voice
+(approximately 5 to 10 years old in tone). It is a synthetic persona only.
+
+### Install dependencies
+
+```powershell
+pip install -r requirements.txt
+```
+
+### Configure .env
+
+Copy `.env.example` to `.env` (or edit an existing `.env`) and set:
+
+```ini
+TTS_PROVIDER=edge
+TTS_VOICE=en-US-BrianNeural
+TTS_RATE=+20%
+TTS_PITCH=+35%
+TTS_VOLUME=+0%
+TTS_STYLE=young_boy_5_10
+ASSISTANT_PERSONA=young_boy_safe_assistant
+```
+
+The assistant automatically uses `bn-BD-PradeepNeural` for Bengali text so the
+Bengali voice assistant keeps working.
+
+### Test voice
+
+```powershell
+python scripts\test_young_voice.py
+```
+
+### Run the dashboard
+
+```powershell
+python dashboard\app.py
+```
+
+Open:
+
+```
+http://127.0.0.1:8000/nahin
+```
+
+Use the **Young Voice Settings** card to preview the voice, hear the startup
+greeting, test the Bangla voice, and test the coding helper voice.
+
+### Adjusting the voice age feeling
+
+- If the voice sounds too adult, **increase pitch** (e.g. `+40%`).
+- If it sounds robotic, **lower pitch** (e.g. `+20%`).
+- If it speaks too fast, **reduce rate** (e.g. `+10%`).
+- If it sounds too slow, **increase rate** (e.g. `+25%`).
+
+Recommended presets:
+
+| Goal | Rate | Pitch |
+|------|------|-------|
+| Very young sound | `+20%` | `+35%` |
+| Softer childlike sound | `+12%` | `+25%` |
+| More natural young assistant | `+8%` | `+18%` |
+
+### Troubleshooting
+
+- If no sound plays, check speakers and audio output.
+- If Edge TTS fails, check your internet connection.
+- If Bangla sounds wrong, try `TTS_FALLBACK_VOICE_2=bn-BD-PradeepNeural`.
+- If English sounds better, use `en-US-BrianNeural` or `en-US-AndrewNeural`.
+
+### Safety note
+
+This is a fictional synthetic assistant voice. It must not imitate a real child
+and must never be used for inappropriate content. The assistant is designed to
+stay safe, cheerful, respectful, and age-appropriate at all times.
+
+---
+
 ## Installation
 
 ### Prerequisites

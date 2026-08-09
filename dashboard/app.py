@@ -19,6 +19,8 @@ from flask import Flask, jsonify, redirect, render_template, request, url_for
 
 from nahin.services.briefing_service import StartupBriefingService
 from nahin.services.command_service import NahinCommandService
+from nahin.services.persona_service import PersonaService
+from nahin.services.tts_service import TTSService
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,8 @@ CSRF_TOKEN = secrets.token_hex(16)
 
 briefing_service = StartupBriefingService()
 command_service = NahinCommandService()
+persona_service = PersonaService()
+tts_service = TTSService()
 
 ALLOWED_COMMANDS = [
     "help",
@@ -61,7 +65,62 @@ def dashboard():
         commands=ALLOWED_COMMANDS,
         host=HOST,
         port=PORT,
+        voice_config=tts_service.get_voice_config(),
+        startup_greeting=persona_service.get_startup_greeting(),
     )
+
+
+def _csrf_ok(data) -> bool:
+    token = str(data.get("csrf_token", ""))
+    return secrets.compare_digest(token, CSRF_TOKEN)
+
+
+def _voice_result(result: dict, status: int = 200):
+    return jsonify(result), status
+
+
+@app.route("/nahin/voice/config")
+def voice_config():
+    return jsonify(tts_service.get_voice_config())
+
+
+@app.route("/nahin/voice/preview", methods=["POST"])
+def voice_preview():
+    if not _csrf_ok(request.get_json(silent=True) or request.form):
+        return _voice_result({"success": False, "message": "Invalid or missing security token."}, 400)
+    return _voice_result(tts_service.preview_voice())
+
+
+@app.route("/nahin/voice/preview-child", methods=["POST"])
+def voice_preview_child():
+    if not _csrf_ok(request.get_json(silent=True) or request.form):
+        return _voice_result({"success": False, "message": "Invalid or missing security token."}, 400)
+    return _voice_result(tts_service.preview_child_voice())
+
+
+@app.route("/nahin/voice/speak", methods=["POST"])
+def voice_speak():
+    data = request.get_json(silent=True) or request.form
+    if not _csrf_ok(data):
+        return _voice_result({"success": False, "message": "Invalid or missing security token."}, 400)
+    text = tts_service.sanitize_text(str(data.get("text", "")))
+    if not text:
+        return _voice_result({"success": False, "message": "No text to speak."}, 400)
+    return _voice_result(tts_service.speak(text))
+
+
+@app.route("/nahin/voice/test-bangla", methods=["POST"])
+def voice_test_bangla():
+    if not _csrf_ok(request.get_json(silent=True) or request.form):
+        return _voice_result({"success": False, "message": "Invalid or missing security token."}, 400)
+    return _voice_result(tts_service.preview_bangla_child_voice())
+
+
+@app.route("/nahin/voice/test-coding", methods=["POST"])
+def voice_test_coding():
+    if not _csrf_ok(request.get_json(silent=True) or request.form):
+        return _voice_result({"success": False, "message": "Invalid or missing security token."}, 400)
+    return _voice_result(tts_service.preview_coding_helper())
 
 
 @app.route("/nahin/command", methods=["POST"])

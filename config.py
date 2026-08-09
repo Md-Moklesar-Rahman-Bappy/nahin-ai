@@ -3,21 +3,39 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load variables from the local .env file (if present) before Config is built.
+load_dotenv(BASE_DIR / ".env")
 
 class Config:
     ASSISTANT_NAME = "Nahin"
     WAKE_WORD = "hey nahin"
     
-    OLLAMA_MODEL = "qwen3:4b"
-    OLLAMA_BASE_URL = "http://localhost:11434"
+    OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
+    OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     
-    WHISPER_MODEL_SIZE = "base"
-    WHISPER_LANGUAGE = "bn"
+    WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "base")
+    WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "bn")
     
-    TTS_VOICE = "bn-BD-NabanitaNeural"
-    TTS_RATE = "+0%"
-    TTS_PITCH = "+0Hz"
+    # Text-to-Speech. Defaults create a cheerful, youthful (fictional)
+    # assistant voice. Override any value in the .env file.
+    TTS_PROVIDER = os.getenv("TTS_PROVIDER", "edge")
+    TTS_VOICE = os.getenv("TTS_VOICE", "en-US-BrianNeural")
+    TTS_RATE = os.getenv("TTS_RATE", "+20%")
+    TTS_PITCH = os.getenv("TTS_PITCH", "+35%")
+    TTS_VOLUME = os.getenv("TTS_VOLUME", "+0%")
+    TTS_STYLE = os.getenv("TTS_STYLE", "young_boy_5_10")
+    ASSISTANT_PERSONA = os.getenv("ASSISTANT_PERSONA", "young_boy_safe_assistant")
+
+    # Voice used automatically when the assistant detects Bengali text.
+    TTS_BENGALI_VOICE = os.getenv("TTS_BENGALI_VOICE", "bn-BD-NabanitaNeural")
+
+    # Fallback voices if the primary one fails or sounds wrong.
+    TTS_FALLBACK_VOICE_1 = os.getenv("TTS_FALLBACK_VOICE_1", "en-US-AndrewNeural")
+    TTS_FALLBACK_VOICE_2 = os.getenv("TTS_FALLBACK_VOICE_2", "bn-BD-PradeepNeural")
     
     AUDIO_DEVICE_INDEX = None
     AUDIO_CHUNK_SIZE = 512

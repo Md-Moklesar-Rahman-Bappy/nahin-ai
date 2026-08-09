@@ -11,7 +11,16 @@ class OllamaClient:
     def __init__(self):
         self.model = Config.OLLAMA_MODEL
         self.base_url = Config.OLLAMA_BASE_URL
-        self.system_prompt = Config.SYSTEM_PROMPT
+        self.system_prompt = self._load_system_prompt()
+
+    @staticmethod
+    def _load_system_prompt() -> str:
+        """Prefer the safe young-boy persona, falling back to config."""
+        try:
+            from nahin.services.persona_service import PersonaService
+            return PersonaService().get_system_prompt()
+        except Exception:
+            return Config.SYSTEM_PROMPT
         
     def check_connection(self) -> bool:
         try:

@@ -121,7 +121,7 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    /* ---------- Optional: Speak Greeting (TTS) ---------- */
+    /* ---------- Optional: Speak Greeting (browser TTS) ---------- */
     var speakButton = document.getElementById("speak-greeting");
     if (speakButton) {
         speakButton.addEventListener("click", function () {
@@ -139,6 +139,85 @@
             message.rate = 1;
             window.speechSynthesis.speak(message);
             toast("Speaking greeting...");
+        });
+    }
+
+    /* ---------- Young Voice buttons (Edge TTS via backend) ---------- */
+    var voiceButtons = document.querySelectorAll(".voice-btn");
+    var voiceStatus = document.getElementById("voice-status");
+
+    var voiceEndpoints = {
+        "preview": "/nahin/voice/preview",
+        "speak-greeting": "/nahin/voice/speak",
+        "bangla": "/nahin/voice/test-bangla",
+        "coding": "/nahin/voice/test-coding"
+    };
+
+    var greetingRequested = false;
+    var voiceCard = document.getElementById("voice");
+    var greetingText = voiceCard ? voiceCard.getAttribute("data-startup-greeting")
+        : "Good morning Bappy! Nahin AI is online. I am ready to help you build something awesome.";
+
+    function voiceRequest(url, body) {
+        return fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+    }
+
+    function showVoiceStatus(message, isError) {
+        if (voiceStatus) {
+            voiceStatus.textContent = message;
+            voiceStatus.classList.toggle("voice-error", !!isError);
+        }
+        toast(message, isError);
+    }
+
+    if (voiceButtons.length) {
+        voiceButtons.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var kind = btn.getAttribute("data-voice");
+                var url = voiceEndpoints[kind];
+                if (!url) { return; }
+
+                var csrf = csrfInput ? csrfInput.value : "";
+                var payload = { csrf_token: csrf };
+
+                if (kind === "speak-greeting") {
+                    if (!greetingRequested) {
+                        fetch("/nahin/voice/speak", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ csrf_token: csrf, text: greetingText })
+                        })
+                            .then(function (res) { return res.json(); })
+                            .then(function (data) {
+                                greetingRequested = true;
+                                if (data && data.success) {
+                                    showVoiceStatus("Speaking startup greeting...");
+                                } else {
+                                    showVoiceStatus((data && data.message) || "Could not speak greeting.", true);
+                                }
+                            })
+                            .catch(function () { showVoiceStatus("Could not reach the voice service.", true); });
+                        return;
+                    }
+                    showVoiceStatus("Greeting already spoken. Click Preview to hear it again.");
+                    return;
+                }
+
+                voiceRequest(url, payload)
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        if (data && data.success) {
+                            showVoiceStatus("Playing: " + ((data.text || data.message) || "voice"));
+                        } else {
+                            showVoiceStatus((data && data.message) || "Voice preview failed.", true);
+                        }
+                    })
+                    .catch(function () { showVoiceStatus("Could not reach the voice service.", true); });
+            });
         });
     }
 })();

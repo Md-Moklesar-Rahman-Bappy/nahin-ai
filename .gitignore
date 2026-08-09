@@ -52,3 +52,6 @@ Thumbs.db
 
 # Screenshots
 screenshot_*.png
+
+# Generated audio / runtime storage
+storage/

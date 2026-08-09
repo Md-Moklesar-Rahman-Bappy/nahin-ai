@@ -19,6 +19,7 @@
                 <a href="#status">AI Status</a>
                 <a href="#briefing">Briefing</a>
                 <a href="#work">Work</a>
+                <a href="#voice">Voice</a>
                 <a href="#command">Command Center</a>
                 <a href="#future">Roadmap</a>
             </nav>
@@ -133,6 +134,32 @@
                 <p class="card-body">Repository: <span class="mono">{{ briefing.github.repository }}</span></p>
                 <span class="badge">Coming soon</span>
             </article>
+        </section>
+
+        <!-- ===== Young Voice Settings ===== -->
+        <section class="card voice-card" id="voice" data-startup-greeting="{{ startup_greeting }}">
+            <div class="card-head">
+                <span class="icon">🎤</span>
+                <h3>Young Voice Settings</h3>
+                <span class="badge badge-ok">Fictional persona</span>
+            </div>
+
+            <ul class="status-list voice-grid">
+                <li><span class="label">Assistant</span><span class="value">Nahin</span></li>
+                <li><span class="label">Voice style</span><span class="value">Young boy, 5 to 10 tone</span></li>
+                <li><span class="label">Voice</span><span class="value mono">{{ voice_config.voice }}</span></li>
+                <li><span class="label">Rate</span><span class="value mono">{{ voice_config.rate }}</span></li>
+                <li><span class="label">Pitch</span><span class="value mono">{{ voice_config.pitch }}</span></li>
+                <li><span class="label">Provider</span><span class="value mono">{{ voice_config.provider }}</span></li>
+            </ul>
+
+            <div class="voice-actions">
+                <button class="chip voice-btn" type="button" data-voice="preview">Preview Young Voice</button>
+                <button class="chip voice-btn" type="button" data-voice="speak-greeting">Speak Startup Greeting</button>
+                <button class="chip voice-btn" type="button" data-voice="bangla">Test Bangla Voice</button>
+                <button class="chip voice-btn" type="button" data-voice="coding">Test Coding Helper Voice</button>
+            </div>
+            <p class="voice-note" id="voice-status">Click a button to hear Nahin's voice. Audio plays on this PC.</p>
         </section>
 
         <!-- ===== Command Center ===== -->
