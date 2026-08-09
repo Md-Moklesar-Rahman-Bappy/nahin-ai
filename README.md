@@ -22,34 +22,34 @@ A smart Bengali voice assistant for Windows with local AI processing.
 ## Supported Commands
 
 ### System Control (সিস্টেম নিয়ন্ত্রণ)
-| Bengali | English |
-|---------|---------|
-| volume বাড়াও | increase volume |
-| volume কমাও | decrease volume |
+| Bengali        | English             |
+| -------------- | ------------------- |
+| volume বাড়াও     | increase volume     |
+| volume কমাও     | decrease volume     |
 | brightness বাড়াও | increase brightness |
-| PC বন্ধ করো | shutdown PC |
-| lock করো | lock PC |
-| screenshot নাও | take screenshot |
+| PC বন্ধ করো      | shutdown PC         |
+| lock করো        | lock PC             |
+| screenshot নাও  | take screenshot     |
 
 ### Apps (অ্যাপস)
-| Bengali | English |
-|---------|---------|
-| Chrome খোলো | open Chrome |
+| Bengali    | English      |
+| ---------- | ------------ |
+| Chrome খোলো  | open Chrome  |
 | notepad খোলো | open Notepad |
-| vscode খোলো | open VS Code |
+| vscode খোলো  | open VS Code |
 
 ### Files (ফাইল)
-| Bengali | English |
-|---------|---------|
-| folder তৈরি করো | create folder |
+| Bengali      | English        |
+| ------------ | -------------- |
+| folder তৈরি করো | create folder  |
 | documents খোলো | open Documents |
 | downloads খোলো | open Downloads |
 
 ### Search (সার্চ)
-| Bengali | English |
-|---------|---------|
-| খুঁজে দেখো... | search for... |
-| google করো... | google... |
+| Bengali      | English       |
+| ------------ | ------------- |
+| খুঁজে দেখো...     | search for... |
+| google করো... | google...     |
 
 # Nahin AI Desktop Assistant
 
@@ -93,7 +93,7 @@ Run the dashboard server manually:
 
 ```bat
 cd C:\xampp\htdocs\nahin-ai
-python dashboard\app.py
+python dashboard/app.py
 ```
 
 Or use the launcher:
@@ -112,15 +112,15 @@ http://127.0.0.1:8000/nahin
 
 Supported (whitelist-only) commands:
 
-| Command | What it does |
-|---------|--------------|
-| `help` | List all available commands |
-| `git status` | Show current Git repository status |
-| `project status` | Show project, workspace and branch |
-| `clear cache` | Clear Python `__pycache__` folders |
-| `run tests` | Run pytest (or unittest fallback) |
-| `open vscode` | Prepare VS Code desktop execution |
-| `today's briefing` / `briefing` | Show the startup briefing |
+| Command                         | What it does                       |
+| ------------------------------- | ---------------------------------- |
+| `help`                          | List all available commands        |
+| `git status`                    | Show current Git repository status |
+| `project status`                | Show project, workspace and branch |
+| `clear cache`                   | Clear Python `__pycache__` folders |
+| `run tests`                     | Run pytest (or unittest fallback)  |
+| `open vscode`                   | Prepare VS Code desktop execution  |
+| `today's briefing` / `briefing` | Show the startup briefing          |
 
 ## Safe command rules
 
@@ -175,14 +175,17 @@ Bengali voice assistant keeps working.
 
 ### Test voice
 
-```powershell
-python scripts\test_young_voice.py
+```bash
+python scripts/test_young_voice.py
 ```
+
+> Note: in Git Bash (MINGW64) always use forward slashes —
+> `python scripts\test_young_voice.py` fails because bash eats the backslashes.
 
 ### Run the dashboard
 
-```powershell
-python dashboard\app.py
+```bash
+python dashboard/app.py
 ```
 
 Open:
@@ -203,11 +206,11 @@ greeting, test the Bangla voice, and test the coding helper voice.
 
 Recommended presets:
 
-| Goal | Rate | Pitch |
-|------|------|-------|
-| Very young sound | `+20%` | `+35%` |
-| Softer childlike sound | `+12%` | `+25%` |
-| More natural young assistant | `+8%` | `+18%` |
+| Goal                         | Rate   | Pitch  |
+| ---------------------------- | ------ | ------ |
+| Very young sound             | `+20%` | `+35%` |
+| Softer childlike sound       | `+12%` | `+25%` |
+| More natural young assistant | `+8%`  | `+18%` |
 
 ### Troubleshooting
 
@@ -301,14 +304,14 @@ nahin-ai/
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| STT | faster-whisper (local) |
-| LLM | Ollama (qwen3:4b) |
-| TTS | Edge TTS (bn-BD-NabanitaNeural) |
-| Wake Word | Picovoice Porcupine |
-| UI | pystray |
-| Search | DuckDuckGo |
+| Component | Technology                      |
+| --------- | ------------------------------- |
+| STT       | faster-whisper (local)          |
+| LLM       | Ollama (qwen3:4b)               |
+| TTS       | Edge TTS (bn-BD-NabanitaNeural) |
+| Wake Word | Picovoice Porcupine             |
+| UI        | pystray                         |
+| Search    | DuckDuckGo                      |
 
 ## Roadmap
 

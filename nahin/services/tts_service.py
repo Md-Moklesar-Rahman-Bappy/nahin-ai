@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import threading
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -111,17 +112,41 @@ class TTSService:
 
         try:
             STORAGE_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-            stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-            output_file = STORAGE_AUDIO_DIR / f"nahin_voice_{stamp}.mp3"
 
-            communicate = edge_tts.Communicate(
-                cleaned,
-                voice=voice or self.voice,
-                rate=rate or self.rate,
-                pitch=normalize_pitch(pitch or self.pitch),
-                volume=volume or self.volume,
-            )
-            asyncio.run(communicate.save(str(output_file)))
+            last_error = None
+            output_file = None
+            for attempt in range(3):
+                stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                output_file = STORAGE_AUDIO_DIR / f"nahin_voice_{stamp}.mp3"
+                try:
+                    # Fresh Communicate per attempt: a cancelled websocket cannot
+                    # be reused after an interrupted edge-tts stream.
+                    communicate = edge_tts.Communicate(
+                        cleaned,
+                        voice=voice or self.voice,
+                        rate=rate or self.rate,
+                        pitch=normalize_pitch(pitch or self.pitch),
+                        volume=volume or self.volume,
+                    )
+                    asyncio.run(communicate.save(str(output_file)))
+                    if output_file.stat().st_size > 0:
+                        break
+                    last_error = RuntimeError(
+                        "Edge TTS returned empty audio."
+                    )
+                except (asyncio.CancelledError, KeyboardInterrupt) as exc:
+                    last_error = RuntimeError(
+                        "Edge TTS connection was interrupted. Check your "
+                        "internet connection and try again."
+                    )
+                except Exception as exc:
+                    last_error = exc
+                if attempt < 2:
+                    time.sleep(1)
+            else:
+                if output_file is None:
+                    output_file = STORAGE_AUDIO_DIR / f"nahin_voice_{stamp}.mp3"
+                raise last_error
 
             return {
                 "success": True,
@@ -175,11 +200,21 @@ class TTSService:
             full_path = str(Path(path).resolve())
 
             def run():
-                mci(f'open "{full_path}" alias nahin_voice', None, 0, 0)
-                mci("play nahin_voice wait", None, 0, 0)
-                mci("close nahin_voice", None, 0, 0)
+                try:
+                    err = mci(f'open "{full_path}" alias nahin_voice', None, 0, 0)
+                    if err != 0:
+                        logger.warning("MCI open failed with code %s", err)
+                        return
+                    mci("play nahin_voice wait", None, 0, 0)
+                except Exception as exc:
+                    logger.warning("Audio playback failed: %s", exc)
+                finally:
+                    try:
+                        mci("close nahin_voice", None, 0, 0)
+                    except Exception:
+                        pass
 
-            threading.Thread(target=run, daemon=True).start()
+            threading.Thread(target=run, daemon=False).start()
             return True
         except Exception as exc:
             logger.warning("Audio playback failed: %s", exc)
