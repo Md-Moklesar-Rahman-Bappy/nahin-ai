@@ -178,19 +178,71 @@ def _format_ddg(query: str, results: list[dict]) -> str:
     return "\n".join(lines).strip()
 
 
+# Prioritized Bangladesh news sources
+_BD_SOURCES = {
+    "prothom alo", "the daily star", "dhaka tribune", "bdnews24", "bdnews",
+    "jugantor", "kaler kantho", "ittefaq", "samakal", "bangladesh",
+    "bangla", "bd", "bangladesh politics", "bangladesh economy",
+    "bangladesh technology", "bangladesh education", "bangladesh weather",
+    "bangladesh government", "bangladesh public safety",
+}
+
+# Excluded categories (global only)
+_EXCLUDED_KEYWORDS = {
+    "us celebrity", "hollywood gossip", "celebrity gossip",
+    "foreign entertainment", "us entertainment", "hollywood",
+    "celebrity", "gossip", "entertainment news",
+}
+
+
+def _is_bangladesh_relevant(title: str, snippet: str = "") -> bool:
+    text = (title + " " + snippet).lower()
+    # Must contain Bangladesh reference OR be from a BD source
+    bd_refs = ["bangladesh", "bangla", "bd ", "prothom", "daily star",
+               "dhaka tribune", "bdnews", "jugantor", "kaler kantho",
+               "ittefaq", "samakal", "bangladesh politics",
+               "bangladesh economy", "bangladesh technology",
+               "bangladesh education", "bangladesh weather",
+               "bangladesh government", "bangladesh public safety"]
+    has_bd = any(r in text for r in bd_refs)
+    # Filter out excluded content
+    excluded = any(ex in text for ex in _EXCLUDED_KEYWORDS)
+    return (has_bd or has_bd) and not excluded
+
+
 def _format_news(query: str, results: list[dict]) -> str:
     if not results:
         return f"No news found for: {query}"
 
-    lines = [f"Latest news: {query}\n"]
-    for i, r in enumerate(results, 1):
+    # Filter for Bangladesh relevance, exclude unwanted categories
+    filtered = []
+    for r in results:
+        title = r.get("title", "")
+        snippet = r.get("snippet", "")
+        if _is_bangladesh_relevant(title, snippet):
+            filtered.append(r)
+    # If fewer than 5 Bangladesh items exist, include major international news
+    if len(filtered) < 5:
+        for r in results:
+            if r not in filtered:
+                filtered.append(r)
+        # Limit to max 8 total, with Bangladesh items first
+        filtered = filtered[:8]
+
+    lines = [f"Latest Bangladesh news: {query}\n"]
+    for i, r in enumerate(filtered, 1):
         title = r.get("title", "")
         if not title:
             continue
         src = f"  [{r['source']}]" if r.get("source") else ""
         lines.append(f"{i}. {title}{src}")
         if r.get("snippet"):
-            lines.append(f"   {r['snippet'][:140]}")
+            snippet_clean = r["snippet"][:140]
+            # Filter out unwanted snippets
+            snippet_lower = snippet_clean.lower()
+            if any(ex in snippet_lower for ex in _EXCLUDED_KEYWORDS):
+                snippet_clean = "[Excluded category]"
+            lines.append(f"   {snippet_clean}")
         if r.get("url"):
             lines.append(f"   {r['url']}")
         lines.append("")
@@ -202,14 +254,22 @@ def _format_news(query: str, results: list[dict]) -> str:
 def _gemini_headlines(n: int = 5) -> tuple[list[str], str]:
     """
     Fetches current headlines via Gemini grounded search.
-    Optimised for speed: minimal prompt + strict token cap.
-    Returns (headline_list, raw_text_for_display).
+    Default: Bangladesh news. Prioritises Bangladesh politics, economy,
+    technology, education, weather alerts, government announcements,
+    and public safety. Only includes international news if fewer than
+    5 Bangladesh items exist.
     """
     import re
     from core import gemini
 
     response = gemini.call(
-        f"Current world news: {n} headlines. Numbered list, titles only.",
+        "Bangladesh news headlines: politics, economy, technology, education, "
+        "weather alerts, government announcements, public safety. "
+        "Prioritize sources: Prothom Alo, The Daily Star, Dhaka Tribune, "
+        "bdnews24, Jugantor, Kaler Kantho, Ittefaq, Samakal. "
+        "Exclude US celebrity, Hollywood gossip, foreign entertainment. "
+        f"Numbered list: {n} top Bangladesh headlines. If fewer than 5 Bangladesh items, "
+        "include major international news.",
         tier=gemini.SEARCH,
         config={"tools": [{"google_search": {}}]},
         timeout_ms=30_000,
@@ -265,8 +325,17 @@ def _news(query: str) -> str:
     exactly what the briefing wants, so it goes first and Gemini is only touched
     when DDG comes back empty.
     """
-    gemini_query = f"latest news today: {query}" if query else "top world news today"
-    ddg_query    = query if query else "world news today"
+    # Default country = Bangladesh; default language = Bengali
+    # Only include major international news if fewer than 5 Bangladesh items exist.
+    gemini_query = (
+        f"latest Bangladesh news: {query}" if query else 
+        "latest Bangladesh news today: politics, economy, technology, education, "
+        "weather alerts, government announcements, public safety. "
+        "Prioritize: Prothom Alo, The Daily Star, Dhaka Tribune, bdnews24, "
+        "Jugantor, Kaler Kantho, Ittefaq, Samakal. "
+        "Exclude: US celebrity, Hollywood gossip, foreign entertainment."
+    )
+    ddg_query    = query if query else "Bangladesh news today"
 
     def _ddg_attempt() -> str:
         return _format_news(ddg_query, _ddg_news(ddg_query, max_results=8))

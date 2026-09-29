@@ -1757,7 +1757,15 @@ class NahinurLive:
 
         # Start fetching news immediately — runs in parallel while phase 1 plays
         loop = asyncio.get_event_loop()
-        news_future = loop.run_in_executor(None, _fetch_news_sync, "top world news today")
+        # Default country = Bangladesh; default language = Bengali
+        # Only include major international news if fewer than 5 Bangladesh items exist.
+        news_future = loop.run_in_executor(
+            None, _fetch_news_sync,
+            "Bangladesh news today: politics, economy, technology, education, "
+            "weather alerts, government announcements, public safety. "
+            "Prioritize sources: Prothom Alo, The Daily Star, Dhaka Tribune, "
+            "bdnews24, Jugantor, Kaler Kantho, Ittefaq, Samakal."
+        )
 
         await asyncio.sleep(0.3)
         if not self.session:
@@ -1786,7 +1794,10 @@ class NahinurLive:
             )
 
         p1 = (
-            f"Greet the user warmly, mention it is {time_str}, and say you are fetching today's news now.{session_clause} "
+            f"Greet the user warmly in {lang or 'Bengali'}, mention it is {time_str} in Dhaka, Bangladesh, "
+            f"and say you are fetching today's Bangladesh news now. Focus on Bangladesh politics, economy, "
+            f"technology, education, weather alerts, government announcements, and public safety. "
+            f"Exclude US celebrity and Hollywood gossip.{session_clause} "
             f"Keep it to 2 short sentences max. Do not call any tools.{lang_clause}{name_clause}"
         )
 
@@ -1841,10 +1852,14 @@ class NahinurLive:
                 )
                 if not failed:
                     # Show on UI content panel immediately
-                    self.ui.show_content("NEWS — top world news today", news_text)
+                    self.ui.show_content("BANGLADESH NEWS — top headlines today", news_text)
 
                     p2 = (
-                        f"[BRIEFING] Here are today's top news headlines:\n{news_text}\n\n"
+                        f"[BRIEFING] Here are today's top Bangladesh news headlines:\n{news_text}\n\n"
+                        "Prioritise Bangladesh politics, economy, technology, education, "
+                        "weather alerts, government announcements, and public safety. "
+                        "Exclude US celebrity, Hollywood gossip, and foreign entertainment. "
+                        "If fewer than 5 Bangladesh items, include major international news. "
                         "Pick ONE headline, summarise it in one sentence, then say the full list "
                         f"is displayed on screen. Do not call any tools.{lang_str}"
                     )
