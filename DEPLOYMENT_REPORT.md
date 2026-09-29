@@ -1,0 +1,1 @@
+DEPLOYMENT REPORT\nTarget repo: https://github.com/Md-Moklesar-Rahman-Bappy/nahin-ai.git\nTarget branch: main\nOLD_TARGET_MAIN_COMMIT: 17c0cd7f47b354e3920e8cbec29bc5e552eb7fda\nBackup branch: backup/before-nahinur-ai-replacement\nStatus: Starting verification...\n

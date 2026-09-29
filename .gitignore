@@ -48,3 +48,21 @@ desktop.ini
 logs/
 downloads/
 screenshots/
+recordings/
+captures/
+sessions/
+cache/
+temp/
+tmp/
+# Additional build/test artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+# Additional secrets and local files
+*.sqlite
+*.sqlite3
+*.db
+# Temporary/rebranding artifacts (do not commit)
+do_rebrand.py
+final_check.txt
+secret_scan.txt
