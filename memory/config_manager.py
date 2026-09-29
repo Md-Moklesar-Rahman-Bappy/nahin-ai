@@ -78,8 +78,17 @@ def save_assistant_config(assistant_name: str, user_name: str) -> None:
 # ── Assistant voice ──────────────────────────────────────────────────────────
 # Gemini Live prebuilt voices. Names are proper nouns — identical in every
 # language, so this list is safe to show verbatim in any locale.
-AVAILABLE_VOICES = ["Charon", "Puck", "Kore", "Fenrir", "Aoede"]
-DEFAULT_VOICE    = "Charon"
+# Voice age/pitch reference (youngest → oldest):
+#   Puck     — youthful male (young boy)  ← youngest available male voice
+#   Charon   — deep male (older/adult)
+#   Fenrir   — resonant male (adult)
+#   Kore     — young female (youthful)
+#   Aoede    — soft female (adult)
+AVAILABLE_VOICES       = ["Charon", "Puck", "Kore", "Fenrir", "Aoede"]
+DEFAULT_VOICE          = "Puck"
+YOUTHFUL_BOY_VOICE     = "Puck"
+YOUTHFUL_BOY_VOICE_LABEL = "Youthful Boy Voice"
+VOICE_FALLBACK_ORDER   = ["Puck", "Charon", "Kore", "Aoede", "Fenrir"]
 
 
 def get_voice() -> str:
@@ -102,6 +111,45 @@ def save_voice(voice_name: str) -> None:
     v = (voice_name or "").strip()
     data["voice_name"] = v if v in AVAILABLE_VOICES else DEFAULT_VOICE
     CONFIG_FILE.write_text(json.dumps(data, indent=4), encoding="utf-8")
+
+
+def get_youthful_boy_voice() -> str:
+    """Return the configured 'Youthful Boy Voice' setting, or the youth voice
+    constant if unset. Applies fallback: if the chosen voice is not available,
+    walks VOICE_FALLBACK_ORDER for the next best match."""
+    v = load_api_keys().get("youthful_boy_voice", YOUTHFUL_BOY_VOICE) or YOUTHFUL_BOY_VOICE
+    if v in AVAILABLE_VOICES:
+        return v
+    for candidate in VOICE_FALLBACK_ORDER:
+        if candidate in AVAILABLE_VOICES:
+            return candidate
+    return DEFAULT_VOICE
+
+
+def save_youthful_boy_voice(voice_name: str) -> None:
+    """Persist the Youthful Boy Voice selection. Unknown names collapse to the
+    youthful boy voice constant."""
+    ensure_config_dir()
+    data: dict = {}
+    if CONFIG_FILE.exists():
+        try:
+            data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+    v = (voice_name or "").strip()
+    data["youthful_boy_voice"] = v if v in AVAILABLE_VOICES else YOUTHFUL_BOY_VOICE
+    CONFIG_FILE.write_text(json.dumps(data, indent=4), encoding="utf-8")
+
+
+def get_voice_fallback() -> str:
+    """Return the fallback voice for the current youthful boy voice selection.
+    Walks VOICE_FALLBACK_ORDER starting after the current voice."""
+    current = get_youthful_boy_voice()
+    idx = VOICE_FALLBACK_ORDER.index(current) if current in VOICE_FALLBACK_ORDER else -1
+    for candidate in VOICE_FALLBACK_ORDER[idx + 1:]:
+        if candidate in AVAILABLE_VOICES:
+            return candidate
+    return DEFAULT_VOICE
 
 
 def get_wake_word_enabled() -> bool:

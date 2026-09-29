@@ -8,12 +8,10 @@ def weather_action(
     session_memory=None,
 ) -> str:
     city     = parameters.get("city")
-    when     = parameters.get("time", "today")  
+    when     = parameters.get("time", "today")
 
     if not city or not isinstance(city, str) or not city.strip():
-        msg = "Sir, the city is missing for the weather report."
-        _log(msg, player)
-        return msg
+        city = "Dhaka"
 
     city = city.strip()
     when = (when or "today").strip()
@@ -30,7 +28,8 @@ def weather_action(
         _log(msg, player)
         return msg
 
-    msg = f"Showing the weather for {city}, {when}, sir."
+    city_label = city if city.lower() != "dhaka" else "Dhaka, Bangladesh"
+    msg = f"Showing the weather for {city_label}, {when}, sir."
     _log(msg, player)
 
     if session_memory:
@@ -54,7 +53,7 @@ def _log(message: str, player=None) -> None:
 # ── Tool declaration (auto-discovered by core/action_loader.py) ──────────────
 TOOL = {
     "name": "weather_report",
-    "description": "Gives the weather report to user",
+    "description": "Gives the weather report to user. Default city: Dhaka, Bangladesh",
     "parameters": {
         "type": "OBJECT",
         "properties": {

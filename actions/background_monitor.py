@@ -104,7 +104,7 @@ def check_all() -> list[str]:
     Run all pending topic checks (once per day per topic).
     Returns a list of [MONITOR_ALERT] strings — empty if nothing new.
     """
-    from actions.web_search import _ddg_news
+    from actions.web_search import _ddg_news, _is_country_specific
 
     monitors = _load()
     if not monitors:
@@ -119,8 +119,14 @@ def check_all() -> list[str]:
             continue                     # already checked today
 
         topic = data.get("topic", slug)
+        # Default to Bangladesh for generic topics — only check other countries
+        # when the user explicitly named one in the topic.
+        if not _is_country_specific(topic):
+            search_topic = f"Bangladesh {topic}"
+        else:
+            search_topic = topic
         try:
-            results = _ddg_news(topic, max_results=5)
+            results = _ddg_news(search_topic, max_results=5)
             if not results:
                 monitors[slug]["last_check"] = today
                 changed = True

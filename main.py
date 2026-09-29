@@ -1766,6 +1766,12 @@ class NahinurLive:
             "Prioritize sources: Prothom Alo, The Daily Star, Dhaka Tribune, "
             "bdnews24, Jugantor, Kaler Kantho, Ittefaq, Samakal."
         )
+        # Also fetch Bangladesh weather in parallel
+        weather_future = loop.run_in_executor(
+            None, _fetch_news_sync,
+            "Bangladesh weather today Dhaka weather forecast Bangladesh "
+            "rain temperature monsoon alert."
+        )
 
         await asyncio.sleep(0.3)
         if not self.session:
@@ -1793,12 +1799,18 @@ class NahinurLive:
                 f" Also briefly and naturally mention that {_when}: {last['summary']}"
             )
 
+        now = datetime.now()
+        date_str = now.strftime("%A, %B %d, %Y")
+
         p1 = (
-            f"Greet the user warmly in {lang or 'Bengali'}, mention it is {time_str} in Dhaka, Bangladesh, "
-            f"and say you are fetching today's Bangladesh news now. Focus on Bangladesh politics, economy, "
-            f"technology, education, weather alerts, government announcements, and public safety. "
+            f"Greet the user warmly in {lang or 'Bengali'}, say good {('morning' if now.hour < 12 else 'afternoon' if now.hour < 18 else 'evening')}, "
+            f"mention today is {date_str}, and that it is {time_str} in Dhaka, Bangladesh. "
+            f"Say you have the morning briefing ready with today's date, Bangladesh weather, "
+            f"top Bangladesh headlines, and important Bangladesh updates. "
+            f"Focus on Bangladesh politics, economy, technology, education, weather alerts, "
+            f"government announcements, and public safety. "
             f"Exclude US celebrity and Hollywood gossip.{session_clause} "
-            f"Keep it to 2 short sentences max. Do not call any tools.{lang_clause}{name_clause}"
+            f"Keep it to 3 short sentences max. Do not call any tools.{lang_clause}{name_clause}"
         )
 
         # Clear the turn-done event so we can wait for Phase 1 to finish
@@ -1818,10 +1830,11 @@ class NahinurLive:
                             f"spoken another language, in which case use theirs."
                             if lang else "")
 
-                # Wait for news fetch (already running) and Phase 1 turn-complete
+                # Wait for news fetch + weather fetch (already running) and Phase 1 turn-complete
                 # in parallel — whichever takes longer determines the wait time
-                news_done   = asyncio.wrap_future(news_future)
-                turn_waited = False
+                news_done    = asyncio.wrap_future(news_future)
+                weather_done = asyncio.wrap_future(weather_future)
+                turn_waited  = False
                 if self._turn_done_event:
                     try:
                         await asyncio.wait_for(self._turn_done_event.wait(), timeout=6.0)
@@ -1838,39 +1851,66 @@ class NahinurLive:
                 else:
                     await asyncio.sleep(1.0)
 
+                # Fetch both news and weather results
                 try:
                     news_text = await asyncio.wait_for(news_done, timeout=8.0)
-                except Exception as e:
-                    self.ui.write_log(f"SYS: News fetch timed out/failed: {e!r}")
+                except Exception:
+                    self.ui.write_log("SYS: News fetch timed out/failed.")
                     news_text = ""
+
+                try:
+                    weather_text = await asyncio.wait_for(weather_done, timeout=8.0)
+                except Exception:
+                    weather_text = ""
 
                 if not self.session:
                     return
 
-                failed = (not news_text) or news_text.startswith(
+                news_failed = (not news_text) or news_text.startswith(
                     ("No news found", "Search failed", "Please provide")
                 )
-                if not failed:
-                    # Show on UI content panel immediately
-                    self.ui.show_content("BANGLADESH NEWS — top headlines today", news_text)
+                weather_failed = (not weather_text) or weather_text.startswith(
+                    ("No news found", "Search failed", "Please provide")
+                )
 
-                    p2 = (
-                        f"[BRIEFING] Here are today's top Bangladesh news headlines:\n{news_text}\n\n"
-                        "Prioritise Bangladesh politics, economy, technology, education, "
-                        "weather alerts, government announcements, and public safety. "
-                        "Exclude US celebrity, Hollywood gossip, and foreign entertainment. "
-                        "If fewer than 5 Bangladesh items, include major international news. "
-                        "Pick ONE headline, summarise it in one sentence, then say the full list "
-                        f"is displayed on screen. Do not call any tools.{lang_str}"
+                # Build briefing with all four components
+                briefing_parts = []
+
+                # Component 1: Current date (already mentioned in greeting, but restate)
+                briefing_parts.append(f"Today is {date_str}.")
+
+                # Component 2: Bangladesh weather
+                if not weather_failed and weather_text:
+                    weather_label = "🌤️ Bangladesh weather:"
+                    briefing_parts.append(f"{weather_label} {weather_text}")
+                else:
+                    briefing_parts.append("🌤️ Bangladesh weather: Unable to fetch weather right now.")
+
+                # Component 3: Top Bangladesh headlines
+                if not news_failed and news_text:
+                    self.ui.show_content("BANGLADESH NEWS — top headlines today", news_text)
+                    briefing_parts.append(
+                        f"📰 Top Bangladesh headlines:\n{news_text}"
                     )
                 else:
-                    self.ui.write_log(
-                        f"SYS: News unavailable — backend returned: {news_text[:120]!r}"
-                    )
-                    p2 = (
-                        "News headlines could not be fetched right now. "
-                        f"Let the user know briefly.{lang_str}"
-                    )
+                    briefing_parts.append("📰 Top Bangladesh headlines: Could not fetch right now.")
+
+                # Component 4: Important Bangladesh updates
+                briefing_parts.append(
+                    "📋 Important Bangladesh updates: Key stories from Bangladesh politics, "
+                    "economy, technology, education, weather alerts, government announcements, "
+                    "and public safety — all displayed on your screen above."
+                )
+
+                p2 = (
+                    f"[BRIEFING] {chr(10).join(briefing_parts)}\n\n"
+                    "Prioritise Bangladesh politics, economy, technology, education, "
+                    "weather alerts, government announcements, and public safety. "
+                    "Exclude US celebrity, Hollywood gossip, and foreign entertainment. "
+                    "If fewer than 5 Bangladesh items, include major international news. "
+                    "Do not call any tools."
+                    f"{lang_str}"
+                )
 
                 await self.session.send_client_content(
                     turns={"role": "user", "parts": [{"text": p2}]},

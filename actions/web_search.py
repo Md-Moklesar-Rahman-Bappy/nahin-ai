@@ -195,9 +195,53 @@ _EXCLUDED_KEYWORDS = {
 }
 
 
+def _is_country_specific(query: str) -> bool:
+    if not query:
+        return False
+    q = query.lower()
+    _COUNTRY_HINTS = [
+        " in ", " from ", " about ", "in us", "in usa", "in america", "in uk",
+        "in britain", "in england", "in china", "in japan", "in india",
+        "in pakistan", "in russia", "in france", "in germany", "in korea",
+        "in south korea", "in australia", "in canada", "in brazil",
+        "in turkey", "in egypt", "in uae", "in saudi", "in iran", "in iraq",
+        "us news", "usa news", "america news", "uk news", "britain news",
+        "china news", "japan news", "india news", "pakistan news",
+        "russia news", "france news", "germany news", "korea news",
+        "south korea news", "australia news", "canada news", "brazil news",
+        "turkey news", "egypt news", "uae news", "saudi news", "iran news",
+        "iraq news", "london", "washington", "beijing", "tokyo", "delhi",
+        "islamabad", "moscow", "paris", "berlin", "seoul", "sydney",
+        "ottawa", "brasilia", "ankara", "cairo", "dubai", "riyadh",
+        "tehran", "baghdad", "new york", "los angeles",
+        "san francisco", "chicago", "houston", "phoenix", "philadelphia",
+        "toronto", "vancouver", "melbourne", "sydney", "auckland",
+        "manchester", "birmingham", "glasgow", "edinburgh",
+        "lombardy", "bavaria", "castile", "andalusia", "provence",
+        "rhineland", "saxony", "bavaria", "tyrol", "veneto",
+        "tokyo", "osaka", "kyoto", "nagoya", "fukuoka",
+        "mumbai", "delhi", "bangalore", "hyderabad", "ahmedabad",
+        "karachi", "lahore", "rawalpindi", "faisalabad",
+        "beijing", "shanghai", "guangzhou", "shenzhen", "chengdu",
+        "seoul", "busan", "incheon", "daegu", "daejeon",
+        "canberra", "sydney", "melbourne", "brisbane", "perth",
+        "sao paulo", "rio de janeiro", "brasilia", "salvador", "curitiba",
+    ]
+    for hint in _COUNTRY_HINTS:
+        if hint in q:
+            return True
+    _COUNTRY_NAMES = [
+        "united states", "united kingdom", "great britain", "russian federation",
+        "federal republic", "people's republic", "republic of", "democratic",
+    ]
+    for name in _COUNTRY_NAMES:
+        if name in q:
+            return True
+    return False
+
+
 def _is_bangladesh_relevant(title: str, snippet: str = "") -> bool:
     text = (title + " " + snippet).lower()
-    # Must contain Bangladesh reference OR be from a BD source
     bd_refs = ["bangladesh", "bangla", "bd ", "prothom", "daily star",
                "dhaka tribune", "bdnews", "jugantor", "kaler kantho",
                "ittefaq", "samakal", "bangladesh politics",
@@ -205,14 +249,32 @@ def _is_bangladesh_relevant(title: str, snippet: str = "") -> bool:
                "bangladesh education", "bangladesh weather",
                "bangladesh government", "bangladesh public safety"]
     has_bd = any(r in text for r in bd_refs)
-    # Filter out excluded content
     excluded = any(ex in text for ex in _EXCLUDED_KEYWORDS)
-    return (has_bd or has_bd) and not excluded
+    return has_bd and not excluded
 
 
 def _format_news(query: str, results: list[dict]) -> str:
     if not results:
         return f"No news found for: {query}"
+
+    country_specific = _is_country_specific(query)
+
+    if country_specific:
+        # User asked about a specific country — show all relevant results
+        lines = [f"Latest news: {query}\n"]
+        for i, r in enumerate(results, 1):
+            title = r.get("title", "")
+            if not title:
+                continue
+            src = f"  [{r['source']}]" if r.get("source") else ""
+            lines.append(f"{i}. {title}{src}")
+            if r.get("snippet"):
+                snippet_clean = r["snippet"][:140]
+                lines.append(f"   {snippet_clean}")
+            if r.get("url"):
+                lines.append(f"   {r['url']}")
+            lines.append("")
+        return "\n".join(lines).strip()
 
     # Filter for Bangladesh relevance, exclude unwanted categories
     filtered = []
@@ -251,25 +313,38 @@ def _format_news(query: str, results: list[dict]) -> str:
 
 # ── Briefing helper ────────────────────────────────────────────────────────────
 
-def _gemini_headlines(n: int = 5) -> tuple[list[str], str]:
+def _gemini_headlines(n: int = 5, query: str = "") -> tuple[list[str], str]:
     """
     Fetches current headlines via Gemini grounded search.
     Default: Bangladesh news. Prioritises Bangladesh politics, economy,
     technology, education, weather alerts, government announcements,
     and public safety. Only includes international news if fewer than
     5 Bangladesh items exist.
+
+    If query specifies another country, fetch that country's headlines instead.
     """
     import re
     from core import gemini
 
+    if _is_country_specific(query):
+        headline_prompt = (
+            f"Latest news headlines about: {query}. "
+            f"Top {n} headlines with one-line summaries. "
+            "Include source names."
+        )
+    else:
+        headline_prompt = (
+            "Bangladesh news headlines: politics, economy, technology, education, "
+            "weather alerts, government announcements, public safety. "
+            "Prioritize sources: Prothom Alo, The Daily Star, Dhaka Tribune, "
+            "bdnews24, Jugantor, Kaler Kantho, Ittefaq, Samakal. "
+            "Exclude US celebrity, Hollywood gossip, foreign entertainment. "
+            f"Numbered list: {n} top Bangladesh headlines. If fewer than 5 Bangladesh items, "
+            "include major international news."
+        )
+
     response = gemini.call(
-        "Bangladesh news headlines: politics, economy, technology, education, "
-        "weather alerts, government announcements, public safety. "
-        "Prioritize sources: Prothom Alo, The Daily Star, Dhaka Tribune, "
-        "bdnews24, Jugantor, Kaler Kantho, Ittefaq, Samakal. "
-        "Exclude US celebrity, Hollywood gossip, foreign entertainment. "
-        f"Numbered list: {n} top Bangladesh headlines. If fewer than 5 Bangladesh items, "
-        "include major international news.",
+        headline_prompt,
         tier=gemini.SEARCH,
         config={"tools": [{"google_search": {}}]},
         timeout_ms=30_000,
@@ -324,18 +399,31 @@ def _news(query: str) -> str:
     DDG news returns in well under a second and gives raw headlines, which is
     exactly what the briefing wants, so it goes first and Gemini is only touched
     when DDG comes back empty.
+
+    Default country = Bangladesh; default language = Bengali.
+    When the user asks about a specific other country, that country's news is
+    fetched instead. "latest news" / "news" / "today's news" all mean
+    "latest Bangladesh news" unless a country is explicitly specified.
     """
-    # Default country = Bangladesh; default language = Bengali
-    # Only include major international news if fewer than 5 Bangladesh items exist.
-    gemini_query = (
-        f"latest Bangladesh news: {query}" if query else 
-        "latest Bangladesh news today: politics, economy, technology, education, "
-        "weather alerts, government announcements, public safety. "
-        "Prioritize: Prothom Alo, The Daily Star, Dhaka Tribune, bdnews24, "
-        "Jugantor, Kaler Kantho, Ittefaq, Samakal. "
-        "Exclude: US celebrity, Hollywood gossip, foreign entertainment."
-    )
-    ddg_query    = query if query else "Bangladesh news today"
+    country_specific = _is_country_specific(query)
+
+    if country_specific:
+        gemini_query = (
+            f"latest news about: {query}. "
+            "Give top headlines, summary of each, and source names."
+        )
+        ddg_query = query
+    else:
+        # Default to Bangladesh news for generic queries
+        gemini_query = (
+            f"latest Bangladesh news: {query}" if query else
+            "latest Bangladesh news today: politics, economy, technology, education, "
+            "weather alerts, government announcements, public safety. "
+            "Prioritize: Prothom Alo, The Daily Star, Dhaka Tribune, bdnews24, "
+            "Jugantor, Kaler Kantho, Ittefaq, Samakal. "
+            "Exclude: US celebrity, Hollywood gossip, foreign entertainment."
+        )
+        ddg_query = query if query else "Bangladesh news today"
 
     def _ddg_attempt() -> str:
         return _format_news(ddg_query, _ddg_news(ddg_query, max_results=8))
@@ -453,7 +541,7 @@ def web_search(
 # ── Tool declaration (auto-discovered by core/action_loader.py) ──────────────
 TOOL = {
     "name": "web_search",
-    "description": "Searches the web. Use for ANY question about current facts, events, prices, or topics — always prefer this over guessing. Modes: 'search' (default), 'news' (latest headlines on a topic), 'research' (deep comprehensive answer), 'price' (product cost lookup), 'compare' (side-by-side comparison of items).",
+    "description": "Searches the web. Use for ANY question about current facts, events, prices, or topics — always prefer this over guessing. Modes: 'search' (default), 'news' (latest headlines on a topic), 'research' (deep comprehensive answer), 'price' (product cost lookup), 'compare' (side-by-side comparison of items). Default country = Bangladesh; 'news' and 'latest news' mean Bangladesh news unless another country is specified.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
